@@ -1,0 +1,38 @@
+name: Setup Flutter with pub cache
+description: Install Flutter, restore the pub cache keyed on pubspec.lock, and run flutter pub get, as a single step.
+branding:
+  icon: download
+  color: blue
+
+inputs:
+  flutter-version:
+    description: Exact Flutter version to install. Leave empty to track a channel instead.
+    required: false
+    default: ''
+  channel:
+    description: Flutter channel to track when no exact version is given.
+    required: false
+    default: stable
+
+runs:
+  using: composite
+  steps:
+    - name: Install Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ inputs.flutter-version }}
+        channel: ${{ inputs.channel }}
+        cache: true
+        cache-key: flutter-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+
+    - name: Cache pub
+      uses: actions/cache@v6
+      with:
+        path: ~/.pub-cache
+        key: ${{ runner.os }}-pub-${{ hashFiles('pubspec.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-pub-
+
+    - name: Fetch packages
+      run: flutter pub get
+      shell: bash
