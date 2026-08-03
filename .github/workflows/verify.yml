@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -30,6 +33,10 @@ jobs:
             flutter-version: ""
             label: " / stable"
           - os: ubuntu-latest
+            channel: beta
+            flutter-version: ""
+            label: " / beta"
+          - os: ubuntu-latest
             channel: ""
             flutter-version: "3.44.4"
             label: " / pinned 3.44.4"
@@ -38,16 +45,27 @@ jobs:
             flutter-version: "3.44.4"
             label: " / pinned 3.44.4"
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
 
       - uses: ./
         with:
           flutter-version: ${{ matrix.flutter-version }}
           channel: ${{ matrix.channel }}
 
-      - name: Verify Flutter is on PATH
+      - name: Verify Flutter matches the requested version
         shell: bash
-        run: flutter --version
+        env:
+          EXPECTED_CHANNEL: ${{ matrix.channel }}
+          EXPECTED_VERSION: ${{ matrix.flutter-version }}
+        run: |
+          flutter --version 2>&1 | tee /tmp/flutter-version.txt
+          if [ -n "$EXPECTED_VERSION" ]; then
+            grep -q "Flutter ${EXPECTED_VERSION} " /tmp/flutter-version.txt || { echo "expected Flutter $EXPECTED_VERSION" >&2; exit 1; }
+          else
+            grep -q "channel ${EXPECTED_CHANNEL}" /tmp/flutter-version.txt || { echo "expected channel $EXPECTED_CHANNEL" >&2; exit 1; }
+          fi
 
       - name: Verify pub cache location and contents
         shell: bash
@@ -65,6 +83,28 @@ jobs:
           test -d "$PUB_CACHE" || { echo "PUB_CACHE directory missing" >&2; exit 1; }
           test -d "$PUB_CACHE/hosted" || { echo "no hosted packages cached" >&2; exit 1; }
 
-      - name: Verify pub get resolved the fixture
+      - name: Verify pub get resolved http from the pub cache
         shell: bash
-        run: test -f .dart_tool/package_config.json
+        run: |
+          test -f .dart_tool/package_config.json
+          PY=python3
+          command -v python3 >/dev/null 2>&1 || PY=python
+          "$PY" - "$PUB_CACHE" <<'EOF'
+          import json, os, sys, urllib.parse
+          pub_cache = os.path.normcase(os.path.realpath(sys.argv[1]))
+          base = os.path.dirname(os.path.abspath(".dart_tool/package_config.json"))
+          with open(".dart_tool/package_config.json") as f:
+              packages = json.load(f)["packages"]
+          http = next((p for p in packages if p["name"] == "http"), None)
+          assert http is not None, "http package missing from package_config.json"
+          root = http["rootUri"]
+          if "://" in root:
+              root = urllib.parse.urlparse(root).path
+              if os.name == "nt" and root.startswith("/"):
+                  root = root[1:]
+          if not os.path.isabs(root):
+              root = os.path.join(base, root)
+          root = os.path.normcase(os.path.realpath(root))
+          assert root.startswith(pub_cache), f"{root} not under PUB_CACHE {pub_cache}"
+          print(f"http resolved under PUB_CACHE ({root})")
+          EOF
