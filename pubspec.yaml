@@ -1,0 +1,10 @@
+name: setup_flutter_fixture
+description: Minimal Flutter fixture used by CI to verify the setup-flutter composite action.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  http: ^1.2.0

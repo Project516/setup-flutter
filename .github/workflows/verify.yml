@@ -1,0 +1,70 @@
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }}${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            channel: stable
+            flutter-version: ""
+            label: " / stable"
+          - os: macos-latest
+            channel: stable
+            flutter-version: ""
+            label: " / stable"
+          - os: windows-latest
+            channel: stable
+            flutter-version: ""
+            label: " / stable"
+          - os: ubuntu-latest
+            channel: ""
+            flutter-version: "3.44.4"
+            label: " / pinned 3.44.4"
+          - os: windows-latest
+            channel: ""
+            flutter-version: "3.44.4"
+            label: " / pinned 3.44.4"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./
+        with:
+          flutter-version: ${{ matrix.flutter-version }}
+          channel: ${{ matrix.channel }}
+
+      - name: Verify Flutter is on PATH
+        shell: bash
+        run: flutter --version
+
+      - name: Verify pub cache location and contents
+        shell: bash
+        run: |
+          echo "PUB_CACHE=$PUB_CACHE"
+          expected="$HOME/.pub-cache"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            expected="$LOCALAPPDATA/Pub/Cache"
+          fi
+          norm() { printf '%s' "$1" | tr '\\' '/' | tr '[:upper:]' '[:lower:]'; }
+          if [ "$(norm "$PUB_CACHE")" != "$(norm "$expected")" ]; then
+            echo "expected PUB_CACHE to be $expected" >&2
+            exit 1
+          fi
+          test -d "$PUB_CACHE" || { echo "PUB_CACHE directory missing" >&2; exit 1; }
+          test -d "$PUB_CACHE/hosted" || { echo "no hosted packages cached" >&2; exit 1; }
+
+      - name: Verify pub get resolved the fixture
+        shell: bash
+        run: test -f .dart_tool/package_config.json
