@@ -30,7 +30,7 @@ runs:
       with:
         # subosito/flutter-action@v2 exports PUB_CACHE to the job environment,
         # pointing at the directory `flutter pub get` actually populates
-        # (~/pub-cache on Linux and macOS, the LOCALAPPDATA Pub Cache on
+        # (~/.pub-cache on Linux and macOS, the LOCALAPPDATA Pub Cache on
         # Windows). Cache that path directly so this step stays in sync with
         # the SDK install step on every runner OS. Hardcoding ~/.pub-cache
         # instead misses the real cache directory on Windows runners, where

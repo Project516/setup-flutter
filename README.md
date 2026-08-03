@@ -41,7 +41,7 @@ Run it after checkout and before any `flutter` command. It replaces roughly
 The pub cache step snapshots the directory `flutter pub get` writes to on
 the current runner, resolved from the `PUB_CACHE` env var that
 [subosito/flutter-action](https://github.com/subosito/flutter-action)
-exports for the job. That path is `~/pub-cache` on Linux and macOS and the
+exports for the job. That path is `~/.pub-cache` on Linux and macOS and the
 `LOCALAPPDATA` Pub Cache on Windows, so the same workflow caches the right
 directory on every runner OS. Leave the key (`${{ runner.os }}-pub-...`) as
 is for cross-OS safety: a cache built on Windows is not reused on Ubuntu,
