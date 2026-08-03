@@ -1,5 +1,5 @@
 name: Setup Flutter with pub cache
-description: Install Flutter, restore the pub cache keyed on pubspec.lock, and run flutter pub get, as a single step.
+description: Install Flutter, restore the pub cache keyed on pubspec.yaml, and run flutter pub get, as a single step.
 branding:
   icon: download
   color: blue
@@ -23,7 +23,7 @@ runs:
         flutter-version: ${{ inputs.flutter-version }}
         channel: ${{ inputs.channel }}
         cache: true
-        cache-key: flutter-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+        cache-key: flutter-${{ runner.os }}-${{ hashFiles('pubspec.yaml') }}
 
     - name: Cache pub
       uses: actions/cache@v6
@@ -36,7 +36,7 @@ runs:
         # instead misses the real cache directory on Windows runners, where
         # Flutter writes pub packages to %LOCALAPPDATA%\Pub\Cache by default.
         path: ${{ env.PUB_CACHE }}
-        key: ${{ runner.os }}-pub-${{ hashFiles('pubspec.lock') }}
+        key: ${{ runner.os }}-pub-${{ hashFiles('pubspec.yaml') }}
         restore-keys: |
           ${{ runner.os }}-pub-
 

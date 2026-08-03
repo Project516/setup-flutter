@@ -4,7 +4,7 @@ One composite action for the three-step block every Flutter CI job repeats:
 install Flutter, restore the pub cache, run `flutter pub get`. Wraps
 [subosito/flutter-action](https://github.com/subosito/flutter-action) and
 [actions/cache](https://github.com/actions/cache), with both caches keyed on
-`pubspec.lock`.
+`pubspec.yaml`.
 
 ## Usage
 
