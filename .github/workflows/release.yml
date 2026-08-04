@@ -1,0 +1,58 @@
+name: Move major tag
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+# One run at a time, so two tag pushes cannot both decide where a major tag
+# belongs. Queued rather than cancelled: every push should get its turn.
+concurrency:
+  group: move-major-tag
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  move-major-tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Move the major tag to the newest stable release in that major
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          # Strict semver only: no leading zeroes, no pre-release suffix, so a
+          # v1.0.1-rc.1 push cannot put v1 on a release candidate.
+          if [[ ! "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "$TAG is not a stable vX.Y.Z tag; leaving the major tag alone"
+            exit 0
+          fi
+
+          MAJOR="v${BASH_REMATCH[1]}"
+
+          # Point the major at the greatest stable tag in the series rather than
+          # at whatever tag triggered this run. Re-pushing an old tag would
+          # otherwise walk the major backward onto a version consumers have
+          # already moved off.
+          git fetch --force --tags origin
+          NEWEST="$(git tag --list "${MAJOR}.*" \
+            | grep -E "^${MAJOR}\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$" \
+            | sort -V \
+            | tail -n 1)"
+
+          if [[ "$NEWEST" != "$TAG" ]]; then
+            echo "$NEWEST is newer than $TAG, so $MAJOR stays where it is"
+            exit 0
+          fi
+
+          git tag -f "$MAJOR" "$TAG"
+          git push --force origin "refs/tags/$MAJOR"
+          echo "$MAJOR now points at $TAG"
