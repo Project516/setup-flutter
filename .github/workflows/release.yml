@@ -1,11 +1,15 @@
 name: Move major tag
 
-# Tag pushes never reliably trigger a workflow run in this repo, so this
-# listens for the release being published instead -- that always happens
-# when we cut a release, and GitHub raises the event consistently.
+# This listens for the release being published because tag pushes do not
+# raise a workflow run in this repo. `released` is included alongside
+# `published` because promoting a prerelease to a full release fires
+# `released`, not `published`; a plain stable publish fires both, but the
+# concurrency group serialises them and the job always points the major
+# tag at the greatest stable tag in the series, so the second run is a
+# harmless no-op.
 on:
   release:
-    types: [published]
+    types: [published, released]
 
 # One run at a time, so two releases cannot both decide where a major tag
 # belongs. Queued rather than cancelled: every release should get its turn.
